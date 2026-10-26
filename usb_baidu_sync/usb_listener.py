@@ -28,13 +28,20 @@ def get_volume_metadata(mount_path: str | Path) -> tuple[str, str, bool]:
         )
         info = plistlib.loads(res.stdout)
         name = info.get("VolumeName") or Path(path).name
-        uuid = info.get("VolumeUUID") or f"NO_UUID_{name}_{info.get('TotalSize', 0)}"
+        uuid = (
+            info.get("VolumeUUID")
+            or info.get("DiskUUID")
+            or info.get("MediaUUID")
+            or info.get("VolumeSerialNumber")
+            or info.get("DeviceIdentifier")
+            or f"NO_UUID_{name}_{info.get('TotalSize', 0)}"
+        )
         removable = bool(info.get("RemovableMedia", False) or info.get("Ejectable", False))
         is_internal = bool(info.get("Internal", False))
 
         # Accept if explicitly ejectable/removable, or if located in /Volumes/ and not the root filesystem
         is_external = (removable or not is_internal) and path != "/" and path.startswith("/Volumes/")
-        return name, uuid, is_external
+        return name, str(uuid), is_external
     except Exception as e:
         logger.debug("diskutil info failed for %s: %s", path, e)
         name = Path(path).name
@@ -109,3 +116,14 @@ class USBListener:
             logger.warning("PyObjC Cocoa not available in current environment; running in fallback mode.")
         except Exception as e:
             logger.error("Failed to register NSWorkspace observer: %s", e)
+
+    def stop(self) -> None:
+        """Remove observers from NSWorkspace."""
+        if self._observer:
+            try:
+                from AppKit import NSWorkspace
+                center = NSWorkspace.sharedWorkspace().notificationCenter()
+                center.removeObserver_(self._observer)
+            except Exception as e:
+                logger.debug("Failed removing observer: %s", e)
+            self._observer = None

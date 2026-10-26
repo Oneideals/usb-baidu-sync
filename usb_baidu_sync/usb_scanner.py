@@ -48,6 +48,9 @@ def scan_volume(
                 continue
 
             full_p = Path(dirpath) / fname
+            if not full_p.is_file():
+                continue
+
             try:
                 # Resolve potential symlinks safely
                 stat = full_p.stat()
@@ -62,4 +65,5 @@ def scan_volume(
             except (OSError, PermissionError):
                 continue
 
+    results.sort(key=lambda x: x.rel_path)
     return results

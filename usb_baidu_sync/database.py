@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 from usb_baidu_sync.fingerprint import calculate_fast_hash
 
@@ -22,15 +23,26 @@ class SyncDatabase:
 
         self._init_schema()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager that automatically commits transactions and guarantees connection closure."""
         conn = sqlite3.connect(self.db_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _init_schema(self) -> None:
-        """Create tables and indices if not existing."""
-        with self._get_connection() as conn:
+        """Create tables, WAL mode, and indices if not existing."""
+        with self._connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS usb_volumes (
@@ -66,11 +78,10 @@ class SyncDatabase:
                 ON file_fingerprints(volume_uuid, rel_path)
                 """
             )
-            conn.commit()
 
     def upsert_volume(self, volume_uuid: str, volume_name: str, mount_path: str) -> None:
         """Record or update USB volume information."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -83,11 +94,10 @@ class SyncDatabase:
                 """,
                 (volume_uuid, volume_name, mount_path),
             )
-            conn.commit()
 
     def get_file_record(self, volume_uuid: str, rel_path: str) -> dict[str, Any] | None:
         """Fetch existing fingerprint record for a file in a volume."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -131,7 +141,7 @@ class SyncDatabase:
         current_hash = calculate_fast_hash(file_path, size)
         if current_hash == record["fast_hash"]:
             # Content didn't change, only mtime touched -> update mtime in DB and skip
-            with self._get_connection() as conn:
+            with self._connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -141,7 +151,6 @@ class SyncDatabase:
                     """,
                     (mtime, record["id"]),
                 )
-                conn.commit()
             return False, "HASH_MATCH"
 
         return True, "HASH_MISMATCH"
@@ -157,7 +166,7 @@ class SyncDatabase:
         remote_path: str,
     ) -> None:
         """Record a successfully uploaded file into fingerprints."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -178,7 +187,6 @@ class SyncDatabase:
                 """,
                 (volume_uuid, rel_path, file_size, mtime, fast_hash, remote_path),
             )
-            conn.commit()
 
     def record_upload_status(
         self,
@@ -192,7 +200,7 @@ class SyncDatabase:
         fast_hash: str = "",
     ) -> None:
         """Record failed or interrupted upload status."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -208,4 +216,3 @@ class SyncDatabase:
                 """,
                 (volume_uuid, rel_path, file_size, mtime, fast_hash, remote_path, status, error_msg),
             )
-            conn.commit()
