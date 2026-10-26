@@ -1,0 +1,9 @@
+.superpowers/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+.DS_Store
+dist/
+build/
+*.egg-info/
