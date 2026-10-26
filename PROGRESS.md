@@ -1,7 +1,7 @@
 # 🚀 Project Progress & Agent Handover — usb-baidu-sync
 
-> **Last Updated:** 2026-10-26T10:51:42Z (read-only projection)
-> **Git State:** `clean` | **Branch:** `main` | **Events Count:** 12
+> **Last Updated:** 2026-10-26T12:10:40Z (read-only projection)
+> **Git State:** `dirty` | **Branch:** `main` | **Events Count:** 13
 
 ---
 
@@ -19,7 +19,7 @@ _No active leases._
 
 ## 📝 Working Tree Changes
 
-_Working tree is clean._
+- `.M` `.gitignore`
 
 ## 💡 Handoff Instructions for Next Agent
 

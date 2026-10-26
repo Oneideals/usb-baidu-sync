@@ -7,3 +7,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.venv/
+*.app
+launch_app.command

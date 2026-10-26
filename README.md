@@ -22,22 +22,31 @@
 
 ---
 
-## 🚀 快速上手
+## 🚀 一键运行与使用方式
 
-### 1. 环境准备
-确保你的 Mac 已安装 Python 3.9+。进入项目目录安装依赖：
+我们为你准备了 3 种极简的一键运行方式，按你的使用习惯任选一种即可：
+
+### 方式一：双击独立 App 运行（推荐，最直观）
+在项目目录中已自动生成 **`USBBaiduSync.app`**（以及外置硬盘的 `外置硬盘 APP 启动合集/4☁️ USB百度增量备份`）：
+- **直接双击 `USBBaiduSync.app`** 即可在后台静默启动！
+- 启动后顶部菜单栏（状态栏）右上角会出现 `💾` 小图标，Dock 栏无冗余图标。
+- 你也可以直接把它复制或拖拽到桌面、或者系统的 `/Applications` 文件夹中。
+
+### 方式二：双击 `.command` 脚本运行
+在项目根目录下：
+- **双击 `启动USBBaiduSync.command`** 即可一键拉起程序。
+
+### 方式三：配置开机全自动启动（最省心，真正零点击）
+如果希望每次开机自动常驻在右上角，插上 U 盘就自动备份，运行安装脚本：
 ```bash
-pip install -r requirements.txt
+./scripts/install_autostart.sh
 ```
+- 以后开机就会自动常驻后台监听，连点击都无需操作。
+- 如需关闭开机自启，随时运行 `./scripts/uninstall_autostart.sh` 即可。
 
-### 2. 百度网盘上传引擎 (BaiduPCS-Go)
-工具底层使用高效的 Go 传输引擎 `BaiduPCS-Go`。推荐通过 Homebrew 一键安装：
-```bash
-brew install baidupcs-go
-```
-*或从 [BaiduPCS-Go Releases](https://github.com/qjfoidnh/BaiduPCS-Go/releases) 下载 macOS 版本放入系统 PATH 或 `~/Library/Application Support/USBBaiduSync/bin/BaiduPCS-Go`。*
+---
 
-### 3. 获取并配置百度网盘 BDUSS
+## 🛠️ 首次使用配置（仅需 1 次）
 1. 在浏览器（Chrome/Safari）登录你的百度网盘网页版 [pan.baidu.com](https://pan.baidu.com)。
 2. 按 F12 打开开发者工具 -> Application (应用) -> Cookies -> `https://pan.baidu.com`。
 3. 找到名为 `BDUSS` 的 Cookie 项，复制其 Value 字符串。
