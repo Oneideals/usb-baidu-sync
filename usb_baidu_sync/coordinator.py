@@ -133,14 +133,17 @@ class SyncCoordinator:
         if self.on_status:
             self.on_status(f"🔍 正在扫描 U 盘: {volume_name}...")
 
-        # 2. Check credentials if not dry run and bduss configured
-        if not self.config.dry_run and self.config.bduss:
+        # 2. Check credentials if not dry run
+        if not self.config.dry_run:
             if not self.engine.check_login():
-                warning_msg = "⚠️ 百度网盘登录已过期，请在设置中更新 BDUSS"
+                if not self.config.bduss:
+                    warning_msg = "⚠️ 未配置百度网盘账号凭证 (BDUSS)，请在设置中配置"
+                else:
+                    warning_msg = "⚠️ 百度网盘登录已过期，请在设置中更新 BDUSS"
                 logger.warning(warning_msg)
                 if self.on_status:
                     self.on_status(warning_msg)
-                send_system_notification("USBBaiduSync", "百度网盘登录已过期，请在设置中更新 BDUSS")
+                send_system_notification("USBBaiduSync", warning_msg)
                 self._current_syncing_mount = None
                 return SyncSummary()
 
@@ -188,7 +191,37 @@ class SyncCoordinator:
             send_system_notification("USBBaiduSync", f"U盘 [{volume_name}] 所有文件均已同步，无需上传。")
             return summary
 
-        # 5. Upload loop with retry and unmount protection
+        # 5. Netdisk quota precheck
+        total_upload_bytes = sum(f.size for f in upload_queue)
+        quota = self.engine.get_quota()
+        if isinstance(quota, (tuple, list)) and len(quota) == 2:
+            used_bytes, total_bytes = quota
+            available_bytes = max(0, total_bytes - used_bytes)
+            if total_upload_bytes > available_bytes:
+                req_gb = total_upload_bytes / (1024**3)
+                avail_gb = available_bytes / (1024**3)
+                warning_msg = f"⚠️ 百度网盘空间不足！待传 {req_gb:.2f}GB，可用 {avail_gb:.2f}GB"
+                logger.warning(warning_msg)
+                if self.on_status:
+                    self.on_status(warning_msg)
+                send_system_notification(
+                    "USBBaiduSync",
+                    f"网盘空间不足：需 {req_gb:.2f}GB，仅剩 {avail_gb:.2f}GB，已中止上传。",
+                )
+                self._current_syncing_mount = None
+                summary.duration_seconds = time.time() - start_time
+                return summary
+
+        # Warn about files exceeding 4GB (Baidu Netdisk free account limit)
+        max_free_limit = 4 * 1024 * 1024 * 1024
+        large_files = [f for f in upload_queue if f.size > max_free_limit]
+        if large_files:
+            logger.warning(
+                "Notice: %d file(s) exceed 4GB. Baidu Netdisk free accounts reject files > 4GB.",
+                len(large_files),
+            )
+
+        # 6. Upload loop with retry and unmount protection
         total_to_upload = len(upload_queue)
         for idx, file_info in enumerate(upload_queue, start=1):
             if self._abort_event.is_set() or not mount_p.exists():
@@ -247,6 +280,15 @@ class SyncCoordinator:
                     self._abort_event.set()
                     break
 
+                if result.is_quota_error:
+                    warning_msg = f"⚠️ 百度网盘空间已满，无法上传: {file_info.rel_path}"
+                    logger.warning(warning_msg)
+                    if self.on_status:
+                        self.on_status("⚠️ 百度网盘空间已满，已自动停止上传")
+                    send_system_notification("USBBaiduSync", "百度网盘空间已满，已中止本次上传任务。")
+                    self._abort_event.set()
+                    break
+
                 if result.is_interrupted or self._abort_event.is_set():
                     break
 
@@ -256,7 +298,7 @@ class SyncCoordinator:
                     logger.info("Upload failed, retrying (%d/%d) in %.1fs...", attempt, MAX_RETRIES, backoff)
                     time.sleep(backoff)
 
-            if not result:
+            if result is None:
                 result = UploadResult(success=False, error_message="Unknown error")
 
             if result.success:
@@ -270,6 +312,19 @@ class SyncCoordinator:
                     remote_path=remote_path,
                 )
                 summary.uploaded_count += 1
+            elif result.is_quota_error:
+                self.db.record_upload_status(
+                    volume_uuid=volume_uuid,
+                    rel_path=file_info.rel_path,
+                    status="FAILED",
+                    error_msg=result.error_message or "Baidu Netdisk storage full (quota exceeded)",
+                    remote_path=remote_path,
+                    file_size=file_info.size,
+                    mtime=file_info.mtime,
+                    fast_hash=fast_hash,
+                )
+                summary.failed_count += 1
+                break
             elif result.is_interrupted or self._abort_event.is_set():
                 self.db.record_upload_status(
                     volume_uuid=volume_uuid,

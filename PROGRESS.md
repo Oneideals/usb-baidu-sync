@@ -1,13 +1,14 @@
 # 🚀 Project Progress & Agent Handover — usb-baidu-sync
 
-> **Last Updated:** 2026-10-26T16:12:50Z (read-only projection)
-> **Git State:** `clean` | **Branch:** `main` | **Events Count:** 15
+> **Last Updated:** 2026-10-27T12:28:18Z (read-only projection)
+> **Git State:** `clean` | **Branch:** `main` | **Events Count:** 21
 
 ---
 
 ## 🎯 Recent Milestones & Completed Tasks ([DONE])
 
-_No completed milestones recorded yet._
+- [DONE] (antigravity, 2026-10-27) feat(sync): 支持网盘空间不足识别熔断与容量预检 [DONE]
+- [DONE] (antigravity, 2026-10-27) 完成网盘空间不足识别熔断、容量预检与单文件限制提示
 
 ## 📋 Open Issues & Backlog ([TODO])
 

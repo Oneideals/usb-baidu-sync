@@ -175,7 +175,13 @@ class USBBaiduSyncApp(rumps.App):
             # Test login
             success = self.coordinator.engine.login_with_bduss(new_bduss)
             if success:
-                rumps.alert("绑定成功", "百度网盘账号已验证并成功登录！")
+                quota = self.coordinator.engine.get_quota()
+                if quota and isinstance(quota, (tuple, list)) and len(quota) == 2:
+                    used_gb = quota[0] / (1024**3)
+                    total_gb = quota[1] / (1024**3)
+                    rumps.alert("绑定成功", f"百度网盘账号已验证并成功登录！\n网盘空间：已用 {used_gb:.1f}GB / 总计 {total_gb:.1f}GB")
+                else:
+                    rumps.alert("绑定成功", "百度网盘账号已验证并成功登录！")
             else:
                 rumps.alert("验证提示", "已保存 BDUSS，如需完整功能请确保 BaiduPCS-Go 可执行文件已安装。")
 
