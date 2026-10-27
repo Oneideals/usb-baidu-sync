@@ -1,12 +1,15 @@
 # 🚀 Project Progress & Agent Handover — usb-baidu-sync
 
-> **Last Updated:** 2026-10-27T12:28:18Z (read-only projection)
-> **Git State:** `clean` | **Branch:** `main` | **Events Count:** 21
+> **Last Updated:** 2026-10-27T15:07:00Z (read-only projection)
+> **Git State:** `clean` | **Branch:** `main` | **Events Count:** 29
 
 ---
 
 ## 🎯 Recent Milestones & Completed Tasks ([DONE])
 
+- [DONE] (antigravity, 2026-10-27) feat(release): 发布开源 v1.0.0 正式版并更新全套规范文档 [DONE]
+- [DONE] (antigravity, 2026-10-27) 完成开源项目标准文件初始化与README重构
+- [DONE] (antigravity, 2026-10-27) 完成独立可分发App打包脚本与内置BaiduPCS-Go支持
 - [DONE] (antigravity, 2026-10-27) feat(sync): 支持网盘空间不足识别熔断与容量预检 [DONE]
 - [DONE] (antigravity, 2026-10-27) 完成网盘空间不足识别熔断、容量预检与单文件限制提示
 

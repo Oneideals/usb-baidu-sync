@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable
@@ -119,10 +120,18 @@ class BaiduEngine:
             if shutil.which(p) or Path(p).is_file():
                 return p
 
-        # Check common locations
+        # Check bundled and common locations
+        bundle_candidates = [
+            Path(__file__).resolve().parent.parent / "bin" / "BaiduPCS-Go",
+            Path(sys.executable).parent / "BaiduPCS-Go",
+            Path(sys.executable).parent / "bin" / "BaiduPCS-Go",
+            Path(sys.executable).parent.parent / "Resources" / "bin" / "BaiduPCS-Go",
+            Path(sys.executable).parent.parent / "MacOS" / "BaiduPCS-Go",
+        ]
         candidates = [
             shutil.which("BaiduPCS-Go"),
             shutil.which("baidupcs-go"),
+            *bundle_candidates,
             Path.home() / "Library" / "Application Support" / "USBBaiduSync" / "bin" / "BaiduPCS-Go",
             Path.home() / ".baidupcsgo" / "BaiduPCS-Go",
             Path("/usr/local/bin/BaiduPCS-Go"),

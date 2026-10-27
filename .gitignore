@@ -10,3 +10,6 @@ build/
 .venv/
 *.app
 launch_app.command
+*.spec
+*.zip
+bin/
